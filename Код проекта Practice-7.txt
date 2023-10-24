@@ -1,0 +1,1079 @@
+Файл проекта Practice-7, в котором собран весь код данного приложения
+Дата сборки - 24 октября 20:18
+
+
+.\index.js
+--------------------------------------------------
+const express = require('express');
+const connectDB = require('./database/dbConnect');
+const dataController = require('./controllers/dataController');
+const userController = require('./controllers/userController')
+const productController = require('./controllers/productController')
+const orderController = require('./controllers/orderController')
+const reviewController = require('./controllers/reviewController')
+
+const app = express();
+
+app.use(express.json()); // Для обработки JSON-данных в теле запроса
+
+// Подключение к MongoDB
+connectDB();
+
+// Использование контроллера данных для всех запросов к /data
+app.use('/data', dataController);
+app.use('/user', userController);
+app.use('/product', productController);
+app.use('/order', orderController);
+app.use('/review', reviewController);
+
+// Запуск сервера
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Сервер запущен на порту ${port}`));
+
+--------------------------------------------------
+
+.\package.json
+--------------------------------------------------
+{
+  "name": "practice-7",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.6.3"
+  },
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "nodemon": "^3.0.1",
+    "sinon": "^17.0.0"
+  }
+}
+
+--------------------------------------------------
+
+.\controllers\dataController.js
+--------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const dataService = require('../services/dataService.js');
+
+router.get('/', async (req, res) => {
+    try {
+        const data = await dataService.getAllData();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const data = await dataService.getDataById(req.params.id);
+        if (data == null) {
+            return res.status(404).json({ message: 'Не найдено данных с данным ID' });
+        }
+        res.json(data);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/', async (req, res) => {
+    try {
+        const savedData = await dataService.createData(req.body.name, req.body.value);
+        res.status(201).json(savedData);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+router.patch('/:id', async (req, res) => {
+    try {
+        const updatedData = await dataService.updateData(req.params.id, req.body.name, req.body.value);
+        res.json(updatedData);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        await dataService.deleteData(req.params.id);
+        res.json({ message: 'Данные успешно удалены' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;
+
+--------------------------------------------------
+
+.\controllers\orderController.js
+--------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const orderService = require('../services/orderService.js');
+
+router.get('/', async (req, res) => {
+    try {
+        const orders = await orderService.getAllOrders();
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const order = await orderService.getOrderById(req.params.id);
+        if (order == null) {
+            return res.status(404).json({ message: 'Не найдено заказа с данным ID' });
+        }
+        res.json(order);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/', async (req, res) => {
+    try {
+        const savedOrder = await orderService.createOrder(req.body.user, req.body.product, req.body.quantity);
+        res.status(201).json(savedOrder);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+router.patch('/:id', async (req, res) => {
+    try {
+        const updatedOrder = await orderService.updateOrder(req.params.id, req.body.user, req.body.product, req.body.quantity);
+        res.json(updatedOrder);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        await orderService.deleteOrder(req.params.id);
+        res.json({ message: 'Заказ успешно удален' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;
+
+--------------------------------------------------
+
+.\controllers\productController.js
+--------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const productService = require('../services/productService.js');
+
+router.get('/', async (req, res) => {
+    try {
+        const products = await productService.getAllProducts();
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const product = await productService.getProductById(req.params.id);
+        if (product == null) {
+            return res.status(404).json({ message: 'Не найдено продукта с данным ID' });
+        }
+        res.json(product);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/', async (req, res) => {
+    try {
+        const savedProduct = await productService.createProduct(req.body.name, req.body.price, req.body.description);
+        res.status(201).json(savedProduct);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+router.patch('/:id', async (req, res) => {
+    try {
+        const updatedProduct = await productService.updateProduct(req.params.id, req.body.name, req.body.price, req.body.description);
+        res.json(updatedProduct);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        await productService.deleteProduct(req.params.id);
+        res.json({ message: 'Продукт успешно удален' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;
+
+--------------------------------------------------
+
+.\controllers\reviewController.js
+--------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const reviewService = require('../services/reviewService.js');
+
+router.get('/', async (req, res) => {
+    try {
+        const reviews = await reviewService.getAllReviews();
+        res.json(reviews);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const review = await reviewService.getReviewById(req.params.id);
+        if (review == null) {
+            return res.status(404).json({ message: 'Не найдено отзыва с данным ID' });
+        }
+        res.json(review);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/', async (req, res) => {
+    try {
+        const savedReview = await reviewService.createReview(req.body.user, req.body.product, req.body.text, req.body.rating);
+        res.status(201).json(savedReview);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+router.patch('/:id', async (req, res) => {
+    try {
+        const updatedReview = await reviewService.updateReview(req.params.id, req.body.user, req.body.product, req.body.text, req.body.rating);
+        res.json(updatedReview);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        await reviewService.deleteReview(req.params.id);
+        res.json({ message: 'Отзыв успешно удален' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;
+
+--------------------------------------------------
+
+.\controllers\userController.js
+--------------------------------------------------
+const express = require('express');
+const router = express.Router();
+const userService = require('../services/userService.js');
+
+router.get('/', async (req, res) => {
+    try {
+        const users = await userService.getAllUsers();
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await userService.getUserById(req.params.id);
+        if (user == null) {
+            return res.status(404).json({ message: 'Не найдено пользователя с данным ID' });
+        }
+        res.json(user);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/', async (req, res) => {
+    try {
+        const savedUser = await userService.createUser(req.body.username, req.body.password, req.body.email);
+        res.status(201).json(savedUser);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
+router.patch('/:id', async (req, res) => {
+    try {
+        const updatedUser = await userService.updateUser(req.params.id, req.body.username, req.body.password, req.body.email);
+        res.json(updatedUser);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        await userService.deleteUser(req.params.id);
+        res.json({ message: 'Пользователь успешно удален' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;
+
+--------------------------------------------------
+
+.\database\dbConnect.js
+--------------------------------------------------
+const mongoose = require('mongoose')
+
+const DB_URL = 'mongodb+srv://user:Maks1612@maindb.pttsxvq.mongodb.net/test'
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(
+            DB_URL,
+            {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+            }
+        )
+        console.log('Успешное подключение к MongoDB')
+    } catch (error) {
+        console.log('Ошибка подключения к MongoDB:', error)
+        process.exit(1)
+    }
+}
+
+module.exports = connectDB
+
+--------------------------------------------------
+
+.\models\dataModel.js
+--------------------------------------------------
+const mongoose = require('mongoose');
+
+// Создание схемы данных
+const dataSchema = new mongoose.Schema({
+    name: String,
+    value: Number
+});
+
+// Создание модели данных на основе схемы
+const Data = mongoose.model('Data', dataSchema);
+
+module.exports = Data;
+
+--------------------------------------------------
+
+.\models\orderModel.js
+--------------------------------------------------
+const mongoose = require('mongoose');
+
+const orderSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    quantity: Number,
+    date: { type: Date, default: Date.now }
+});
+
+const Order = mongoose.model('Order', orderSchema);
+
+module.exports = Order;
+
+--------------------------------------------------
+
+.\models\productModel.js
+--------------------------------------------------
+const mongoose = require('mongoose');
+
+const productSchema = new mongoose.Schema({
+    name: String,
+    price: Number,
+    description: String
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+module.exports = Product;
+
+--------------------------------------------------
+
+.\models\reviewModel.js
+--------------------------------------------------
+const mongoose = require('mongoose');
+
+const reviewSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    text: String,
+    rating: Number,
+    date: { type: Date, default: Date.now }
+});
+
+const Review = mongoose.model('Review', reviewSchema);
+
+module.exports = Review;
+
+--------------------------------------------------
+
+.\models\userModel.js
+--------------------------------------------------
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema({
+    username: String,
+    password: String,
+    email: String
+});
+
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;
+
+--------------------------------------------------
+
+.\services\dataService.js
+--------------------------------------------------
+const Data = require('../models/dataModel.js');
+
+const getAllData = async () => {
+    return await Data.find();
+};
+
+const getDataById = async (id) => {
+    return await Data.findById(id);
+};
+
+const createData = async (name, value) => {
+    const newData = new Data({
+        name: name,
+        value: value
+    });
+
+    return await newData.save();
+};
+
+const updateData = async (id, name, value) => {
+    const data = await Data.findById(id);
+    if (name != null) {
+        data.name = name;
+    }
+
+    if (value != null) {
+        data.value = value;
+    }
+
+    return await data.save();
+};
+
+const deleteData = async (id) => {
+    const data = await Data.findById(id);
+    await data.deleteOne();
+};
+
+module.exports = {
+    getAllData,
+    getDataById,
+    createData,
+    updateData,
+    deleteData
+};
+
+--------------------------------------------------
+
+.\services\orderService.js
+--------------------------------------------------
+const Order = require('../models/orderModel.js');
+
+const getAllOrders = async () => {
+    return await Order.find().populate('user product');
+};
+
+const getOrderById = async (id) => {
+    return await Order.findById(id).populate('user product');
+};
+
+const createOrder = async (user, product, quantity) => {
+    const newOrder = new Order({
+        user: user,
+        product: product,
+        quantity: quantity
+    });
+
+    return await newOrder.save();
+};
+
+const updateOrder = async (id, user, product, quantity) => {
+    const order = await Order.findById(id);
+    if (user != null) {
+        order.user = user;
+    }
+
+    if (product != null) {
+        order.product = product;
+    }
+
+    if (quantity != null) {
+        order.quantity = quantity;
+    }
+
+    return await order.save();
+};
+
+const deleteOrder = async (id) => {
+    const order = await Order.findById(id);
+    await order.deleteOne();
+};
+
+module.exports = {
+    getAllOrders,
+    getOrderById,
+    createOrder,
+    updateOrder,
+    deleteOrder
+};
+
+--------------------------------------------------
+
+.\services\productService.js
+--------------------------------------------------
+const Product = require('../models/productModel.js');
+
+const getAllProducts = async () => {
+    return await Product.find();
+};
+
+const getProductById = async (id) => {
+    return await Product.findById(id);
+};
+
+const createProduct = async (name, price, description) => {
+    const newProduct = new Product({
+        name: name,
+        price: price,
+        description: description
+    });
+
+    return await newProduct.save();
+};
+
+const updateProduct = async (id, name, price, description) => {
+    const product = await Product.findById(id);
+    if (name != null) {
+        product.name = name;
+    }
+
+    if (price != null) {
+        product.price = price;
+    }
+
+    if (description != null) {
+        product.description = description;
+    }
+
+    return await product.save();
+};
+
+const deleteProduct = async (id) => {
+    const product = await Product.findById(id);
+    await product.deleteOne();
+};
+
+module.exports = {
+    getAllProducts,
+    getProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct
+};
+
+--------------------------------------------------
+
+.\services\reviewService.js
+--------------------------------------------------
+const Review = require('../models/reviewModel.js');
+
+const getAllReviews = async () => {
+    return await Review.find().populate('user product');
+};
+
+const getReviewById = async (id) => {
+    return await Review.findById(id).populate('user product');
+};
+
+const createReview = async (userId, productId, text, rating) => {
+    const newReview = new Review({
+        user: userId,
+        product: productId,
+        text: text,
+        rating: rating
+    });
+
+    return await newReview.save();
+};
+
+const updateReview = async (id, userId, productId, text, rating) => {
+    const review = await Review.findById(id);
+    if (userId != null) {
+        review.user = userId;
+    }
+
+    if (productId != null) {
+        review.product = productId;
+    }
+
+    if (text != null) {
+        review.text = text;
+    }
+
+    if (rating != null) {
+        review.rating = rating;
+    }
+
+    return await review.save();
+};
+
+const deleteReview = async (id) => {
+    const review = await Review.findById(id);
+    await review.deleteOne();
+};
+
+module.exports = {
+    getAllReviews,
+    getReviewById,
+    createReview,
+    updateReview,
+    deleteReview
+};
+
+--------------------------------------------------
+
+.\services\userService.js
+--------------------------------------------------
+const User = require('../models/userModel.js');
+
+const getAllUsers = async () => {
+    return await User.find();
+};
+
+const getUserById = async (id) => {
+    return await User.findById(id);
+};
+
+const createUser = async (username, password, email) => {
+    const newUser = new User({
+        username: username,
+        password: password,
+        email: email
+    });
+
+    return await newUser.save();
+};
+
+const updateUser = async (id, username, password, email) => {
+    const user = await User.findById(id);
+    if (username != null) {
+        user.username = username;
+    }
+
+    if (password != null) {
+        user.password = password;
+    }
+
+    if (email != null) {
+        user.email = email;
+    }
+
+    return await user.save();
+};
+
+const deleteUser = async (id) => {
+    const user = await User.findById(id);
+    await user.deleteOne();
+};
+
+module.exports = {
+    getAllUsers,
+    getUserById,
+    createUser,
+    updateUser,
+    deleteUser
+};
+
+--------------------------------------------------
+
+.\test\dataService.test.js
+--------------------------------------------------
+const sinon = require('sinon');
+const { expect } = require('chai');
+const Data = require('../models/dataModel.js');
+const dataService = require('../services/dataService.js');
+
+describe('Data Service', () => {
+    afterEach(() => {
+        sinon.restore();
+    });
+
+    it('GET-ALL should get all data', async () => {
+        const stubValue = [{ name: 'test1', value: 'value1' }];
+        const stub = sinon.stub(Data, 'find').returns(stubValue);
+        const data = await dataService.getAllData();
+        expect(data).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('GET-ID should get data by id', async () => {
+        const stubValue = { name: 'test1', value: 'value1' };
+        const stub = sinon.stub(Data, 'findById').returns(stubValue);
+        const data = await dataService.getDataById('someId');
+        expect(data).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+    
+    it('POST should create data', async () => {
+        const stubValue = { name: 'test1', value: 'value1' };
+        const saveStub = sinon.stub(Data.prototype, 'save').returns(stubValue);
+        const data = await dataService.createData('test1', 'value1');
+        expect(data).to.equal(stubValue);
+        expect(saveStub.calledOnce).to.be.true;
+    });
+    
+    it('PATCH should update data', async () => {
+        const stubValue = { name: 'test1', value: 'value1', save: () => {} };
+        const saveStub = sinon.stub(stubValue, 'save').returns(stubValue);
+        const findStub = sinon.stub(Data, 'findById').returns(stubValue);
+        const data = await dataService.updateData('someId', 'test2', 'value2');
+        expect(data).to.equal(stubValue);
+        expect(findStub.calledOnce).to.be.true;
+        expect(saveStub.calledOnce).to.be.true;
+    });
+    
+    it('DELETE should delete data', async () => {
+        const stubValue = { name: 'test1', value: 'value1', deleteOne: () => {} };
+        const deleteStub = sinon.stub(stubValue, 'deleteOne').returns(stubValue);
+        const findStub = sinon.stub(Data, 'findById').returns(stubValue);
+        await dataService.deleteData('someId');
+        expect(findStub.calledOnce).to.be.true;
+        expect(deleteStub.calledOnce).to.be.true;
+    });
+    
+});
+
+--------------------------------------------------
+
+.\test\orderService.test.js
+--------------------------------------------------
+const sinon = require('sinon');
+const { expect } = require('chai');
+const Order = require('../models/orderModel.js');
+const orderService = require('../services/orderService.js');
+
+describe('Order Service', () => {
+    afterEach(() => {
+        sinon.restore();
+    });
+
+    it('GET-ALL should get all orders', async () => {
+        const stubValue = [{ user: 'user1', product: 'product1', quantity: 1 }];
+        const stub = sinon.stub(Order, 'find').returns({
+            populate: sinon.stub().returns(stubValue)
+        });
+        const orders = await orderService.getAllOrders();
+        expect(orders).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('GET-ID should get order by id', async () => {
+        const stubValue = { user: 'user1', product: 'product1', quantity: 1 };
+        const stub = sinon.stub(Order, 'findById').returns({
+            populate: sinon.stub().returns(stubValue)
+        });
+        const order = await orderService.getOrderById('someId');
+        expect(order).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('POST should create order', async () => {
+        const stubValue = { user: 'user1', product: 'product1', quantity: 1 };
+        const saveStub = sinon.stub(Order.prototype, 'save').returns(stubValue);
+        const order = await orderService.createOrder('user1', 'product1', 1);
+        expect(order).to.equal(stubValue);
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('PATCH should update order', async () => {
+        const stubValue = { user: 'user1', product: 'product1', quantity: 1, save: () => {} };
+        const saveStub = sinon.stub(stubValue, 'save').returns(stubValue);
+        const findStub = sinon.stub(Order, 'findById').returns(stubValue);
+        const order = await orderService.updateOrder('someId', 'user2', 'product2', 2);
+        expect(order).to.equal(stubValue);
+        expect(findStub.calledOnce).to.be.true;
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('DELETE should delete order', async () => {
+        const stubValue = { user: 'user1', product: 'product1', quantity: 1, deleteOne: () => {} };
+        const deleteStub = sinon.stub(stubValue, 'deleteOne').returns(stubValue);
+        const findStub = sinon.stub(Order, 'findById').returns(stubValue);
+        await orderService.deleteOrder('someId');
+        expect(findStub.calledOnce).to.be.true;
+        expect(deleteStub.calledOnce).to.be.true;
+    });
+});
+
+--------------------------------------------------
+
+.\test\productService.test.js
+--------------------------------------------------
+const sinon = require('sinon');
+const { expect } = require('chai');
+const Product = require('../models/productModel.js');
+const productService = require('../services/productService.js');
+
+describe('Product Service', () => {
+    afterEach(() => {
+        sinon.restore();
+    });
+
+    it('GET-ALL should get all products', async () => {
+        const stubValue = [{ name: 'product1', price: 100, description: 'description1' }];
+        const stub = sinon.stub(Product, 'find').returns(stubValue);
+        const products = await productService.getAllProducts();
+        expect(products).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('GET-ID should get product by id', async () => {
+        const stubValue = { name: 'product1', price: 100, description: 'description1' };
+        const stub = sinon.stub(Product, 'findById').returns(stubValue);
+        const product = await productService.getProductById('someId');
+        expect(product).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('POST should create product', async () => {
+        const stubValue = { name: 'product1', price: 100, description: 'description1' };
+        const saveStub = sinon.stub(Product.prototype, 'save').returns(stubValue);
+        const product = await productService.createProduct('product1', 100, 'description1');
+        expect(product).to.equal(stubValue);
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('PATCH should update product', async () => {
+        const stubValue = { name: 'product1', price: 100, description: 'description1', save: () => {} };
+        const saveStub = sinon.stub(stubValue, 'save').returns(stubValue);
+        const findStub = sinon.stub(Product, 'findById').returns(stubValue);
+        const product = await productService.updateProduct('someId', 'product2', 200, 'description2');
+        expect(product).to.equal(stubValue);
+        expect(findStub.calledOnce).to.be.true;
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('DELETE should delete product', async () => {
+        const stubValue = { name: 'product1', price: 100, description: 'description1', deleteOne: () => {} };
+        const deleteStub = sinon.stub(stubValue, 'deleteOne').returns(stubValue);
+        const findStub = sinon.stub(Product, 'findById').returns(stubValue);
+        await productService.deleteProduct('someId');
+        expect(findStub.calledOnce).to.be.true;
+        expect(deleteStub.calledOnce).to.be.true;
+    });
+});
+
+--------------------------------------------------
+
+.\test\reviewService.test.js
+--------------------------------------------------
+const sinon = require('sinon');
+const { expect } = require('chai');
+const Review = require('../models/reviewModel.js');
+const reviewService = require('../services/reviewService.js');
+
+describe('Review Service', () => {
+    afterEach(() => {
+        sinon.restore();
+    });
+
+    it('GET-ALL should get all reviews', async () => {
+        const stubValue = [{ user: 'user1', product: 'product1', text: 'text1', rating: 5 }];
+        const stub = sinon.stub(Review, 'find').returns({
+            populate: sinon.stub().returns(stubValue)
+        });
+        const reviews = await reviewService.getAllReviews();
+        expect(reviews).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('GET-ID should get review by id', async () => {
+        const stubValue = { user: 'user1', product: 'product1', text: 'text1', rating: 5 };
+        const stub = sinon.stub(Review, 'findById').returns({
+            populate: sinon.stub().returns(stubValue)
+        });
+        const review = await reviewService.getReviewById('someId');
+        expect(review).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('POST should create review', async () => {
+        const stubValue = { user: 'user1', product: 'product1', text: 'text1', rating: 5 };
+        const saveStub = sinon.stub(Review.prototype, 'save').returns(stubValue);
+        const review = await reviewService.createReview('user1', 'product1', 'text1', 5);
+        expect(review).to.equal(stubValue);
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('PATCH should update review', async () => {
+        const stubValue = { user: 'user1', product: 'product1', text: 'text1', rating: 5, save: () => {} };
+        const saveStub = sinon.stub(stubValue, 'save').returns(stubValue);
+        const findStub = sinon.stub(Review, 'findById').returns(stubValue);
+        const review = await reviewService.updateReview('someId', 'user2', 'product2', 'text2', 4);
+        expect(review).to.equal(stubValue);
+        expect(findStub.calledOnce).to.be.true;
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('DELETE should delete review', async () => {
+        const stubValue = { user: 'user1', product: 'product1', text: 'text1', rating: 5, deleteOne: () => {} };
+        const deleteStub = sinon.stub(stubValue, 'deleteOne').returns(stubValue);
+        const findStub = sinon.stub(Review, 'findById').returns(stubValue);
+        await reviewService.deleteReview('someId');
+        expect(findStub.calledOnce).to.be.true;
+        expect(deleteStub.calledOnce).to.be.true;
+    });
+});
+
+--------------------------------------------------
+
+.\test\userService.test.js
+--------------------------------------------------
+const sinon = require('sinon');
+const { expect } = require('chai');
+const User = require('../models/userModel.js');
+const userService = require('../services/userService.js');
+
+describe('User Service', () => {
+    afterEach(() => {
+        sinon.restore();
+    });
+
+    it('GET-ALL should get all users', async () => {
+        const stubValue = [{ username: 'user1', password: 'password1', email: 'email1' }];
+        const stub = sinon.stub(User, 'find').returns(stubValue);
+        const users = await userService.getAllUsers();
+        expect(users).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('GET-ID should get user by id', async () => {
+        const stubValue = { username: 'user1', password: 'password1', email: 'email1' };
+        const stub = sinon.stub(User, 'findById').returns(stubValue);
+        const user = await userService.getUserById('someId');
+        expect(user).to.equal(stubValue);
+        expect(stub.calledOnce).to.be.true;
+    });
+
+    it('POST should create user', async () => {
+        const stubValue = { username: 'user1', password: 'password1', email: 'email1' };
+        const saveStub = sinon.stub(User.prototype, 'save').returns(stubValue);
+        const user = await userService.createUser('user1', 'password1', 'email1');
+        expect(user).to.equal(stubValue);
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('PATCH should update user', async () => {
+        const stubValue = { username: 'user1', password: 'password1', email: 'email1', save: () => {} };
+        const saveStub = sinon.stub(stubValue, 'save').returns(stubValue);
+        const findStub = sinon.stub(User, 'findById').returns(stubValue);
+        const user = await userService.updateUser('someId', 'user2', 'password2', 'email2');
+        expect(user).to.equal(stubValue);
+        expect(findStub.calledOnce).to.be.true;
+        expect(saveStub.calledOnce).to.be.true;
+    });
+
+    it('DELETE should delete user', async () => {
+        const stubValue = { username: 'user1', password: 'password1', email: 'email1', deleteOne: () => {} };
+        const deleteStub = sinon.stub(stubValue, 'deleteOne').returns(stubValue);
+        const findStub = sinon.stub(User, 'findById').returns(stubValue);
+        await userService.deleteUser('someId');
+        expect(findStub.calledOnce).to.be.true;
+        expect(deleteStub.calledOnce).to.be.true;
+    });
+});
+
+--------------------------------------------------
+
+
+Прочие файлы:
+--------------------------------------------------
+
+.\README.md
+
+--------------------------------------------------
+
+
+Количество строк в проекте: 913
+
+
+Дерево проекта Practice-7:
+--------------------------------------------------
+├── CodeSum.py
+├── index.js
+├── package-lock.json
+├── package.json
+├── README.md
+├── Код проекта Practice-7.txt
+├── controllers
+│ ├── dataController.js
+│ ├── orderController.js
+│ ├── productController.js
+│ ├── reviewController.js
+│ └── userController.js
+├── database
+│ └── dbConnect.js
+├── models
+│ ├── dataModel.js
+│ ├── orderModel.js
+│ ├── productModel.js
+│ ├── reviewModel.js
+│ └── userModel.js
+├── services
+│ ├── dataService.js
+│ ├── orderService.js
+│ ├── productService.js
+│ ├── reviewService.js
+│ └── userService.js
+└── test
+ ├── dataService.test.js
+ ├── orderService.test.js
+ ├── productService.test.js
+ ├── reviewService.test.js
+ └── userService.test.js
+--------------------------------------------------
